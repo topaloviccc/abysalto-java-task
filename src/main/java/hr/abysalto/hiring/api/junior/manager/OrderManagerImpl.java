@@ -4,6 +4,7 @@ import hr.abysalto.hiring.api.junior.dto.BuyerAddressDTO;
 import hr.abysalto.hiring.api.junior.dto.BuyerDTO;
 import hr.abysalto.hiring.api.junior.dto.OrderDTO;
 import hr.abysalto.hiring.api.junior.dto.OrderItemDTO;
+import hr.abysalto.hiring.api.junior.model.BuyerAddress;
 import hr.abysalto.hiring.api.junior.model.Order;
 import hr.abysalto.hiring.api.junior.model.OrderItem;
 import hr.abysalto.hiring.api.junior.repository.BuyerAddressRepository;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +36,7 @@ public class OrderManagerImpl implements OrderManager {
         OrderDTO dto = new OrderDTO();
         dto.setOrderNr(order.getOrderNr());
 
+
         BuyerDTO buyerDTO = new BuyerDTO();
         buyerRepository.findById(order.getBuyerId()).ifPresent(buyer -> {
             buyerDTO.setBuyerId(buyer.getBuyerId());
@@ -43,9 +46,11 @@ public class OrderManagerImpl implements OrderManager {
 
         dto.setBuyer(buyerDTO);
 
+
         dto.setOrderStatus(order.getOrderStatus());
         dto.setOrderTime(order.getOrderTime());
         dto.setPaymentOption(order.getPaymentOption());
+
 
         BuyerAddressDTO buyerAddressDTO = new BuyerAddressDTO();
         buyerAddressRepository.findById(order.getDeliveryAddressId()).ifPresent(buyerAddress -> {
@@ -55,16 +60,18 @@ public class OrderManagerImpl implements OrderManager {
             buyerAddressDTO.setHomeNumber(buyerAddress.getHomeNumber());
         });
 
+        dto.setDeliveryAddress(buyerAddressDTO);
+
+
         dto.setContactNumber(order.getContactNumber());
         dto.setCurrency(order.getCurrency());
         dto.setTotalPrice(order.getTotalPrice());
 
-        List<OrderItem> orderItems = orderItemRepository.findByOrderNr(order.getOrderNr());
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getOrderNr());
 
         List<OrderItemDTO> orderItemDTOS = orderItems.stream().map(item -> {
             OrderItemDTO dtoItem = new OrderItemDTO();
             dtoItem.setOrderItemId(item.getOrderItemId());
-            dtoItem.setOrderId(item.getOrderId());
             dtoItem.setItemNr(item.getItemNr());
             dtoItem.setName(item.getName());
             dtoItem.setQuantity(item.getQuantity());
@@ -80,14 +87,14 @@ public class OrderManagerImpl implements OrderManager {
         Order order = new Order();
         order.setOrderNr(dto.getOrderNr());
 
-        if(dto.getBuyer() != null){
+        if (dto.getBuyer() != null) {
             order.setBuyerId(dto.getBuyer().getBuyerId());
         }
         order.setOrderStatus(dto.getOrderStatus());
         order.setOrderTime(dto.getOrderTime());
         order.setPaymentOption(dto.getPaymentOption());
 
-        if(dto.getDeliveryAddress() != null){
+        if (dto.getDeliveryAddress() != null) {
             order.setDeliveryAddressId(dto.getDeliveryAddress().getBuyerAddressId());
         }
 
@@ -111,19 +118,43 @@ public class OrderManagerImpl implements OrderManager {
     public void save(OrderDTO orderDTO) {
 
         Order order = toObj(orderDTO);
-        this.orderRepository.save(order);
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        BuyerAddress address = new BuyerAddress();
 
-        if(orderDTO.getOrderItems() != null){
+
+        if (orderDTO.getOrderItems() != null) {
+
+            for (OrderItemDTO itemDTO : orderDTO.getOrderItems()) {
+                BigDecimal itemPrice = itemDTO.getPrice().multiply(new BigDecimal(itemDTO.getQuantity()));
+                totalPrice = totalPrice.add(itemPrice);
+            }
+        }
+        order.setTotalPrice(totalPrice);
+
+        if (orderDTO.getDeliveryAddress() != null) {
+            address.setCity(orderDTO.getDeliveryAddress().getCity());
+            address.setStreet(orderDTO.getDeliveryAddress().getStreet());
+            address.setHomeNumber(orderDTO.getDeliveryAddress().getHomeNumber());
+        }
+
+        BuyerAddress savedAddress = this.buyerAddressRepository.save(address);
+
+        order.setDeliveryAddressId(savedAddress.getBuyerAddressId());
+        Order savedOrder = this.orderRepository.save(order);
+
+        if (orderDTO.getOrderItems() != null) {
             List<OrderItem> items = orderDTO.getOrderItems().stream().map(itemDTO -> {
                 OrderItem i = new OrderItem();
                 i.setOrderItemId(itemDTO.getOrderItemId());
-                i.setOrderId(itemDTO.getOrderId());
+                i.setItemNr(itemDTO.getItemNr());
+                i.setName(itemDTO.getName());
                 i.setQuantity(itemDTO.getQuantity());
                 i.setPrice(itemDTO.getPrice());
+                i.setOrderId(savedOrder.getOrderNr());
                 return i;
             }).toList();
 
-        this.orderItemRepository.saveAll(items);
+            this.orderItemRepository.saveAll(items);
         }
     }
 

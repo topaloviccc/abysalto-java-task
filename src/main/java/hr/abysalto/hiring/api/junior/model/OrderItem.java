@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
 
 @Data
 public class OrderItem {
 	@Id
 	private Long orderItemId;
+	@Column("ORDER_NR")
 	private Long orderId;
 	private Short itemNr;
 	private String name;

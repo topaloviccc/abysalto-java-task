@@ -2,12 +2,14 @@ package hr.abysalto.hiring.api.junior.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.Data;
 import org.springframework.data.annotation.AccessType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Data
@@ -31,7 +33,8 @@ public class Order {
 	}
 
 	private LocalDateTime orderTime;
-	//	private List<OrderItem> orderItems;
+	@MappedCollection(idColumn = "ORDER_NR")
+//	private List<OrderItem> orderItems;
 	@Transient
 	private PaymentOption paymentOption;
 
