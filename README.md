@@ -1,4 +1,4 @@
-# Restaurant management system made using Java SpringBoot + React.
+# Restaurant management system (SpringBoot + React)
 
 Instructions
 ## Backend
